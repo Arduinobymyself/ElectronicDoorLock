@@ -31,16 +31,24 @@
 //Including libraries
 #include <Wire.h>
 #include <LiquidCrystal.h>
+#include <LiquidCrystal_I2C.h>
 #include <Keypad.h>
 #include <EEPROM.h>
 #include <Servo.h>
 
 //LCD object definitions
-LiquidCrystal lcd(14, 15, 16, 17, 18, 19);
+//IF YOU ARE USING A NORMAL LCD DISPLAY UNCOMMENT THE LINE BELOW
+//LiquidCrystal lcd(14, 15, 16, 17, 18, 19);
 //declares LCD pins
 //pins: R/W - 14, Enable - 15 and Data - 16, 17, 18 e 19
 //used analogic pins 0, 1, 2, 3, 4, 5
 //as digital pins 14, 15, 16, 17, 18, 19 respectively
+
+//IF YOU ARE USING AN I2C LCD DISPLAY UNCOMMENT THE LINE BELOW
+LiquidCrystal_I2C lcd(0x27,16,2);
+//declares LCD I2C address and format
+//SDA must be conneted to Arduino's A4 pin
+//SCL must be conneted to Arduino's A5 pin
 
 //global and general purposes variables
 int count = 0;
@@ -86,8 +94,9 @@ Servo doorLock;
  
 void setup(){
   doorLock.attach(servoPin); //servo motor attaching
-  lcd.begin(16, 2); //LCD mode initialization 16x2
-  //lcd.backlight(); //when using LCD with backlight feature
+  lcd.init(); //if using I2C LCD uncomment this line
+  //lcd.begin(16, 2); /if using normal LCD unomment this line
+  lcd.backlight(); //when using LCD with backlight feature
   
   Serial.begin(9600); //Serial communication initialization
   
