@@ -37,6 +37,7 @@
 #include <Servo.h>
 
 //LCD object definitions
+
 //IF YOU ARE USING A NORMAL LCD DISPLAY UNCOMMENT THE LINE BELOW
 //LiquidCrystal lcd(14, 15, 16, 17, 18, 19);
 //declares LCD pins
@@ -50,12 +51,15 @@ LiquidCrystal_I2C lcd(0x27,16,2);
 //SDA must be conneted to Arduino's A4 pin
 //SCL must be conneted to Arduino's A5 pin
 
+
+
 //global and general purposes variables
 int count = 0;
 int duration = 200;
 String StoredPassword = "1234";
 String OldPassword = "0000";
 String DefaultPassword = "0000";
+int PasswordLength = 4; //adjust this value to get password length different of 4
 
 //pins definitions
 #define yellowPin 12
@@ -94,8 +98,8 @@ Servo doorLock;
  
 void setup(){
   doorLock.attach(servoPin); //servo motor attaching
-  lcd.init(); //if using I2C LCD uncomment this line
-  //lcd.begin(16, 2); /if using normal LCD unomment this line
+  lcd.init(); //if you are using I2C LCD uncomment this line
+  //lcd.begin(16, 2); /if you are using normal LCD unomment this line
   lcd.backlight(); //when using LCD with backlight feature
   
   Serial.begin(9600); //Serial communication initialization
@@ -111,8 +115,8 @@ void setup(){
   
   init_screen(); //calls the initial screen
 
-  //the line below need to be executed just one time or to reset entire system passwords
-  //uncomment if necessary
+  //at very first time using thie system you must to store in teh Arduino's EEPROM a default password
+  //the line below need to be executed just one time; for the entire system passwords resets
   //Write_EEPROM_Password(DefaultPassword);
 
   StoredPassword =  Read_EEPROM_Password(); //reads the stored pasword from the EEPROM
@@ -133,10 +137,11 @@ void loop(){
       int entriesNumber = 0; //amount of entries made by the keypad
       String CurrentPassword;
       
-      while (entriesNumber < 4 ){ //while not made 4 entries to complete the password digits
+      while (entriesNumber < PasswordLength ){ //while not made PasswordLength entries to complete the password digits
         char key = keypad.getKey(); //take reads from the keyboard
         
         if (key != NO_KEY){ //something was pressed in the keypad
+          Mask_Password_Digits(entriesNumber); //mask currently password numbers format as *
           entriesNumber += 1; //increments the number of entries from the keypad
           CurrentPassword += key; //stores the keys into a string
           
@@ -144,7 +149,7 @@ void loop(){
           delay(duration);
           noTone(audioPin);
           
-          if(entriesNumber == 4 ){ //reached 4 entries via keypad
+          if(entriesNumber == PasswordLength ){ //reached PasswordLength entries via keypad
             if(CurrentPassword == StoredPassword){ //checks if the current password is the same stores in the system EEPROM memory
               unlocked(); //if it is correct, access granted and unlock the door system
               init_screen(); //process restarts
@@ -171,10 +176,11 @@ void loop(){
       int entriesNumber = 0;
       String CurrentPassword;
       
-      while(entriesNumber < 4){
+      while(entriesNumber < PasswordLength){
         char key = keypad.getKey();
         
         if(key != NO_KEY){
+          Mask_Password_Digits(entriesNumber);
           entriesNumber += 1;
           CurrentPassword += key;
           
@@ -182,7 +188,7 @@ void loop(){
           delay(duration);
           noTone(audioPin);
          
-          if(entriesNumber == 4){
+          if(entriesNumber == PasswordLength){
             if(CurrentPassword == StoredPassword){//if password is correct
               get_new_pass(); //calls hte function to change a password
               init_screen(); //the process restarts
@@ -230,9 +236,10 @@ void get_new_pass(){
     int entriesNumber = 0;
     String NewPassword;
     
-    while(entriesNumber < 4){ 
+    while(entriesNumber < PasswordLength){ 
       char key = keypad.getKey(); 
       if(key != NO_KEY){ 
+        Mask_Password_Digits(entriesNumber);
         entriesNumber += 1; 
         NewPassword += key; 
         
@@ -240,7 +247,7 @@ void get_new_pass(){
         delay(duration);
         noTone(audioPin);
         
-        if(entriesNumber == 4){
+        if(entriesNumber == PasswordLength){
           StoredPassword = NewPassword;
           Write_EEPROM_Password(StoredPassword); //writes the new password into the arduino's EEPROM
           break;
@@ -258,9 +265,8 @@ void new_pass_screen(){
   
   lcd.clear();
   lcd.print("  New Password");
-  count = 0;
-  lcd.setCursor(0,1);
-  lcd.print("    Press *");
+  //lcd.setCursor(0,1);
+  //lcd.print("    Press *");
   
   tone(audioPin, NOTE_FS6, duration/2);
   delay(duration);
@@ -283,9 +289,8 @@ void old_pass_screen(){
  
   lcd.clear();
   lcd.print(" Old Password?");
-  count = 0;
-  lcd.setCursor(0,1);
-  lcd.print("    Press *");
+  //lcd.setCursor(0,1);
+  //lcd.print("    Press *");
   
   
   tone(audioPin, NOTE_FS6, duration/2);
@@ -317,9 +322,6 @@ void init_screen(){
   lcd.setCursor(0,1);
   lcd.print("  Press # or *");
   
-
-  
-
   digitalWrite(redPin, HIGH);
   digitalWrite(yellowPin, LOW);
   digitalWrite(greenPin, LOW);
@@ -341,8 +343,6 @@ void code_entry_screen(){
   lcd.clear();
   lcd.print("   Password?");
 
-  
-
   tone(audioPin, NOTE_FS6, duration/2);
   delay(duration);
   noTone(audioPin);
@@ -352,14 +352,14 @@ void code_entry_screen(){
   tone(audioPin, NOTE_FS6, duration/2);
   delay(duration);
   
-
   noTone(audioPin);
   
-
   digitalWrite(redPin, LOW);
   digitalWrite(yellowPin, HIGH);
   digitalWrite(greenPin, LOW);
 }
+
+
  
 void unlocked(){
 
@@ -394,7 +394,7 @@ void unlocked(){
 
 String Read_EEPROM_Password(){
   String MyPassword;
-  for (int x = 0; x < 4; x++) {
+  for (int x = 0; x < PasswordLength; x++) {
     char c = char(EEPROM.read(x));
    MyPassword += c;
   }
@@ -405,7 +405,14 @@ String Read_EEPROM_Password(){
 
 void Write_EEPROM_Password(String S){
   String MyPassword = S;
-  for (int x = 0; x<4; x++){
+  for (int x = 0; x<PasswordLength; x++){
  EEPROM.write(x, byte(MyPassword.charAt(x)));
  }
+}
+
+
+
+void Mask_Password_Digits(int i){
+  lcd.setCursor(6+i,1);
+  lcd.print("*");
 }
